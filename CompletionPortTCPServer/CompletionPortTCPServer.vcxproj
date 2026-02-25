@@ -125,10 +125,14 @@
   <ItemGroup>
     <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="NetworkUtils.cpp" />
+    <ClCompile Include="ServerThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcceptThreadArgs.h" />
     <ClInclude Include="CRingBuffer.h" />
+    <ClInclude Include="NetworkUtils.h" />
+    <ClInclude Include="ServerThread.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>

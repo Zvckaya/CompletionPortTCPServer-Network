@@ -1,3 +1,6 @@
+#pragma once;
+#include "Types.h"
+#include "CRingBuffer.h"
 
 
 struct Session
