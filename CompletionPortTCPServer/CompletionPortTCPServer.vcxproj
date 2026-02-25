@@ -127,6 +127,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AcceptThreadArgs.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="Types.h" />
