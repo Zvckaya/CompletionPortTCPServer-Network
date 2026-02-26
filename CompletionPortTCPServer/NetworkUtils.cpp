@@ -106,6 +106,8 @@ void RecvPost(Session* session)
 		if (err != ERROR_IO_PENDING)
 		{
 			printf("[Error] WSARecv 실패: %d\n", err);
+			DeleteSession(session);
+			ReleaseSession(session);
 		}
 	}
 }
@@ -156,8 +158,8 @@ void SendPost(Session* session)
 		if (err != ERROR_IO_PENDING)
 		{
 			printf("[Error] WSASend 실패: %d\n", err);
-
-			InterlockedDecrement(&session->ioCount);
+			DeleteSession(session);
+			ReleaseSession(session);
 		}
 	}
 }
