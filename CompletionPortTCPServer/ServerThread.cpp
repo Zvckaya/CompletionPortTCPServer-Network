@@ -1,16 +1,13 @@
 #include "ServerThread.h"
 #include "NetworkUtils.h"
 #include "Session.h"
+#include "SessionManager.h"
 
 std::vector<HANDLE> workerThreads;
 
-void CreateWorkerThreads(HANDLE hIocp)
+void CreateWorkerThreads(HANDLE hIocp,int threadCount)
 {
-	SYSTEM_INFO si;
-	GetSystemInfo(&si);
-
-	int threadCount = (int)si.dwNumberOfProcessors * 2;
-
+	
 	for (int i = 0; i < threadCount; i++)
 	{
 		DWORD threadId;
@@ -39,17 +36,19 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 		BOOL ret = GetQueuedCompletionStatus(hcp, &cbTransferred, (PULONG_PTR)&session, &lpOverlapped, INFINITE);
 
-		if (session == nullptr)
-			continue;
+		session = reinterpret_cast<Session*>(session);
 
+		if (session == nullptr && lpOverlapped == nullptr)//0,0,nullptr 넣어서 post 했을때만  이렇게 
+			break;
+		
 		if (ret == FALSE || cbTransferred == 0)
 		{
-			closesocket(session->sock);
+			// "플래그 끄기" (연결 카운트 반납)
+			DeleteSession(session);
 
-			if (InterlockedDecrement(&session->ioCount) == 0)
+			if (lpOverlapped != nullptr)
 			{
-
-				delete session;
+				ReleaseSession(session);
 			}
 			continue;
 		}
@@ -62,29 +61,19 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 			char* tempBuf = new char[recvLen + 1];
 			session->recvBuffer.Dequeue(tempBuf, recvLen);
-
 			session->sendBuffer.Enqueue(tempBuf, recvLen);
-
 			delete[] tempBuf;
 
 			SendPost(session);
-
 			RecvPost(session);
 
-			if (InterlockedDecrement(&session->ioCount) == 0)
-			{
-				delete session;
-			}
+			ReleaseSession(session);
 		}
 		else if (lpOverlapped == &session->sendOverlapped)
 		{
 			session->sendBuffer.MoveFront(cbTransferred);
 
-
-			if (InterlockedDecrement(&session->ioCount) == 0)
-			{
-				delete session;
-			}
+			ReleaseSession(session);
 		}
 		else
 		{
@@ -93,6 +82,8 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 		}
 	}
 
+	printf("thread deleting...\n");
+	return 1;
 
 }
 
@@ -132,6 +123,9 @@ DWORD WINAPI AcceptThread(LPVOID arg)
 
 		Session* session = new Session;
 		session->sock = client_sock;
+		
+		SessionManager::GetInstance().AddSession(session);
+		
 
 		CreateIoCompletionPort((HANDLE)client_sock, hcp, (ULONG_PTR)session, 0);
 

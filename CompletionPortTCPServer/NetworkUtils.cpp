@@ -1,4 +1,5 @@
 #include "NetworkUtils.h"
+#include "SessionManager.h"
 
 bool InitWSAandIOCP(HANDLE& outHcp)
 {
@@ -159,6 +160,27 @@ void SendPost(Session* session)
 			InterlockedDecrement(&session->ioCount);
 		}
 	}
+}
 
+
+void ReleaseSession(Session* session)
+{
+	if (InterlockedDecrement(&session->ioCount) == 0)
+	{
+		SessionManager::GetInstance().RemoveSession(session);
+		if (session->sock != INVALID_SOCKET) closesocket(session->sock);
+		delete session;
+		printf("세션 삭제 완료\n");
+	}
 
 }
+void DeleteSession(Session* session)
+{
+	if (session->sock == INVALID_SOCKET) return;
+
+	closesocket(session->sock);
+	session->sock = INVALID_SOCKET;
+
+	ReleaseSession(session);
+}
+

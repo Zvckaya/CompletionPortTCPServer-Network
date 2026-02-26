@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm> // for std::min, max
 
 class CRingBuffer {
 public:

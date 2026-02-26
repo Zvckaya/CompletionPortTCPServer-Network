@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
+#include <unordered_map>
 
 #define SERVERPORT 9000
 #define BUFSIZE 1024

@@ -1,5 +1,6 @@
 #include "Types.h"
 #include "Session.h"
+#include "SessionManager.h"
 #include "NetworkUtils.h"
 #include "ServerThread.h"
 
@@ -7,12 +8,18 @@ int main()
 {
     HANDLE hcp;
 
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+
+    int threadCount = (int)si.dwNumberOfProcessors * 2;
+
+
     if (InitWSAandIOCP(hcp) == false)
     {
         return 1;
     }
 
-    CreateWorkerThreads(hcp);
+    CreateWorkerThreads(hcp,threadCount);
 
     SOCKET listen_sock = BindAndListen(SERVERPORT);
     if (listen_sock == INVALID_SOCKET)
@@ -35,6 +42,12 @@ int main()
     getchar();
 
     closesocket(listen_sock);
+    
+    for (int i = 0; i < threadCount; ++i)
+    {
+        PostQueuedCompletionStatus(hcp, 0, 0, nullptr);
+    }
+
 
     WaitForSingleObject(hAcceptThread, INFINITE);
     CloseHandle(hAcceptThread);

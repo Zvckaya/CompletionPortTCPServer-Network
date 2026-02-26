@@ -9,5 +9,5 @@ struct AcceptThreadArgs
 
 DWORD WINAPI WorkerThread(LPVOID arg);
 DWORD WINAPI AcceptThread(LPVOID arg);
-void CreateWorkerThreads(HANDLE hIocp);
+void CreateWorkerThreads(HANDLE hIocp,int threadCount);
 

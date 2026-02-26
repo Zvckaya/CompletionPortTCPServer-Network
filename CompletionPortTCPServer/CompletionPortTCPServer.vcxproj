@@ -129,11 +129,11 @@
     <ClCompile Include="ServerThread.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcceptThreadArgs.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="NetworkUtils.h" />
     <ClInclude Include="ServerThread.h" />
     <ClInclude Include="Session.h" />
+    <ClInclude Include="SessionManager.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

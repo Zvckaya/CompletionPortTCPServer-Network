@@ -15,7 +15,7 @@ struct Session
 	CRingBuffer recvBuffer;
 	CRingBuffer sendBuffer;
 
-	long ioCount; 
+	long ioCount;
 
 	SRWLOCK lock;
 
@@ -23,7 +23,7 @@ struct Session
 	{
 		sock = INVALID_SOCKET;
 		sessionId = 0;
-		ioCount = 0;
+		ioCount = 1;
 		ZeroMemory(&recvOverlapped, sizeof(recvOverlapped));
 		ZeroMemory(&sendOverlapped, sizeof(sendOverlapped));
 		InitializeSRWLock(&lock);
