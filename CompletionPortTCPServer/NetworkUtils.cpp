@@ -62,7 +62,8 @@ SOCKET BindAndListen(int port)
 	return listenSock;
 }
 
-
+volatile int flaga = 0;
+volatile int flagb = 0;
 void RecvPost(Session* session)
 {
 	CRingBuffer* pRb = &session->recvBuffer;
@@ -96,51 +97,50 @@ void RecvPost(Session* session)
 
 	ZeroMemory(&session->recvOverlapped, sizeof(OVERLAPPED));
 
-	InterlockedIncrement(&session->ioCount);
-
+	
 	int retval = WSARecv(session->sock, wsaBufs, bufCount, &recvBytes, &flags, &session->recvOverlapped, NULL);
 
-	if (retval == SOCKET_ERROR)
+	if (retval == SOCKET_ERROR&& WSAGetLastError()!= ERROR_IO_PENDING)
 	{
-		int err = WSAGetLastError();
-		if (err != ERROR_IO_PENDING)
-		{
-			printf("[Error] WSARecv 실패: %d\n", err);
-			DeleteSession(session);
-			ReleaseSession(session);
-		}
+		if (session->sock != INVALID_SOCKET)
+			closesocket(session->sock);
+		ReleaseSession(session);
 	}
 }
 
 
 void SendPost(Session* session)
 {
-	CRingBuffer* pRb = &session->sendBuffer;
-	if (pRb->GetUseSize() <= 0)
+	
+	if (InterlockedCompareExchange(&session->sendFlag, 1, 0) == 1)
 	{
+		return; 
+	}
+
+	
+
+	int useSize = session->sendBuffer.GetUseSize();
+	if (useSize == 0)
+	{
+		InterlockedExchange(&session->sendFlag, 0);
 		return;
 	}
 
-
-	char* ptr1 = pRb->GetFrontBufferPtr();
-	int len1 = pRb->DirectDequeueSize();
+	char* ptr1 = session->sendBuffer.GetFrontBufferPtr();
+	int len1 = session->sendBuffer.DirectDequeueSize();
 
 	WSABUF wsaBufs[2];
-	int bufCount = 0;
+	int bufCount = 1;
 
 	wsaBufs[0].buf = ptr1;
 	wsaBufs[0].len = len1;
-	bufCount = 1;
 
-	int totalSendSize = len1;
-
-	int remain = pRb->GetUseSize() - len1;
+	int remain = useSize - len1;
 	if (remain > 0)
 	{
-		wsaBufs[1].buf = pRb->GetBufferPtr();
+		wsaBufs[1].buf = session->sendBuffer.GetBufferPtr();
 		wsaBufs[1].len = remain;
 		bufCount = 2;
-		totalSendSize += remain;
 	}
 
 	InterlockedIncrement(&session->ioCount);
@@ -149,9 +149,9 @@ void SendPost(Session* session)
 	DWORD flags = 0;
 	ZeroMemory(&session->sendOverlapped, sizeof(OVERLAPPED));
 
-
 	int retval = WSASend(session->sock, wsaBufs, bufCount, &sendBytes, 0, &session->sendOverlapped, NULL);
 
+	
 	if (retval == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -164,7 +164,6 @@ void SendPost(Session* session)
 	}
 }
 
-
 void ReleaseSession(Session* session)
 {
 	if (InterlockedDecrement(&session->ioCount) == 0)
@@ -172,7 +171,7 @@ void ReleaseSession(Session* session)
 		SessionManager::GetInstance().RemoveSession(session);
 		if (session->sock != INVALID_SOCKET) closesocket(session->sock);
 		delete session;
-		printf("세션 삭제 완료\n");
+		printf("소켓 종료\n ");
 	}
 
 }
@@ -186,3 +185,13 @@ void DeleteSession(Session* session)
 	ReleaseSession(session);
 }
 
+
+
+void SendPacket(Session* session, const char* data, int size)
+{
+	AcquireSRWLockExclusive(&session->lock);
+	session->sendBuffer.Enqueue(data, size);
+	ReleaseSRWLockExclusive(&session->lock);
+
+	SendPost(session);
+}

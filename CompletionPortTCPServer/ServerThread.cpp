@@ -43,36 +43,41 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 		
 		if (ret == FALSE || cbTransferred == 0)
 		{
-			// "플래그 끄기" (연결 카운트 반납)
-			DeleteSession(session);
-
-			if (lpOverlapped != nullptr)
+			if (session->sock != INVALID_SOCKET)
 			{
-				ReleaseSession(session);
+				closesocket(session->sock);
+				session->sock = INVALID_SOCKET;
 			}
-			continue;
 		}
 
 		if (lpOverlapped == &session->recvOverlapped)
 		{
-			session->recvBuffer.MoveRear(cbTransferred);
+			if (ret == FALSE || cbTransferred == 0)
+			{
+				ReleaseSession(session);
+			}
+			else {
+				session->recvBuffer.MoveRear(cbTransferred);
 
-			int recvLen = session->recvBuffer.GetUseSize();
+				int recvLen = session->recvBuffer.GetUseSize();
 
-			char* tempBuf = new char[recvLen + 1];
-			session->recvBuffer.Dequeue(tempBuf, recvLen);
-			session->sendBuffer.Enqueue(tempBuf, recvLen);
-			delete[] tempBuf;
+				char* tempBuf = new char[recvLen + 1];
 
-			SendPost(session);
-			RecvPost(session);
+				session->recvBuffer.Dequeue(tempBuf, recvLen);
+				session->sendBuffer.Enqueue(tempBuf, recvLen);
+				delete[] tempBuf;
 
-			ReleaseSession(session);
+				SendPost(session);
+				RecvPost(session);
+			}
 		}
 		else if (lpOverlapped == &session->sendOverlapped)
 		{
-			session->sendBuffer.MoveFront(cbTransferred);
-
+			if (ret == TRUE && cbTransferred > 0)
+			{
+				session->sendBuffer.MoveFront(cbTransferred);
+			}
+			InterlockedExchange(&session->sendFlag, 0); 
 			ReleaseSession(session);
 		}
 		else
@@ -119,7 +124,7 @@ DWORD WINAPI AcceptThread(LPVOID arg)
 		int zero = 0;
 		setsockopt(client_sock, SOL_SOCKET, SO_SNDBUF, (char*)&zero, sizeof(zero));
 
-		printf("클라이언트 접속 IP: %s PORT: %d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+	//	printf("클라이언트 접속 IP: %s PORT: %d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 
 		Session* session = new Session;
 		session->sock = client_sock;

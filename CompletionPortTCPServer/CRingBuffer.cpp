@@ -5,7 +5,7 @@
 CRingBuffer::CRingBuffer(void)
 	: m_pBuffer(nullptr), m_iBufferSize(0), m_iFront(0), m_iRear(0)
 {
-	Resize(1500);
+	Resize(16384);
 }
 
 CRingBuffer::CRingBuffer(int iBufferSize)

@@ -9,3 +9,5 @@ void SendPost(Session* session);
 
 void ReleaseSession(Session* session);
 void DeleteSession(Session* session);
+
+void SendPacket(Session* session, const char* data, int size);
