@@ -109,20 +109,23 @@ void RecvPost(Session* session)
 }
 
 
+// NetworkUtils.cpp 의 SendPost 함수
+
 void SendPost(Session* session)
 {
-	
 	if (InterlockedCompareExchange(&session->sendFlag, 1, 0) == 1)
 	{
-		return; 
+		return;
 	}
 
-	
+	// [수정5] 여기서부터 링버퍼를 읽으므로 락을 걸어야 함!
+	AcquireSRWLockExclusive(&session->lock);
 
 	int useSize = session->sendBuffer.GetUseSize();
 	if (useSize == 0)
 	{
 		InterlockedExchange(&session->sendFlag, 0);
+		ReleaseSRWLockExclusive(&session->lock); // 락 해제 잊지말기
 		return;
 	}
 
@@ -151,7 +154,9 @@ void SendPost(Session* session)
 
 	int retval = WSASend(session->sock, wsaBufs, bufCount, &sendBytes, 0, &session->sendOverlapped, NULL);
 
-	
+	// [수정6] WSASend 호출 후 셋업이 끝났으니 락 해제
+	ReleaseSRWLockExclusive(&session->lock);
+
 	if (retval == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -163,7 +168,6 @@ void SendPost(Session* session)
 		}
 	}
 }
-
 void ReleaseSession(Session* session)
 {
 	if (InterlockedDecrement(&session->ioCount) == 0)

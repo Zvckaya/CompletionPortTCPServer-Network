@@ -61,13 +61,17 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 				int recvLen = session->recvBuffer.GetUseSize();
 
-				char* tempBuf = new char[recvLen + 1];
+				// [수정1] +1 제거 (바이너리이므로 불필요한 메모리 낭비)
+				char* tempBuf = new char[recvLen];
 
 				session->recvBuffer.Dequeue(tempBuf, recvLen);
-				session->sendBuffer.Enqueue(tempBuf, recvLen);
+
+				// [수정2] 직접 Enqueue 대신 SendPacket 호출 (내부에서 Lock 보호 됨)
+				SendPacket(session, tempBuf, recvLen);
+
 				delete[] tempBuf;
 
-				SendPost(session);
+				// RecvPost(session); 는 SendPacket 밖에서, 즉 여기서 하는게 맞습니다.
 				RecvPost(session);
 			}
 		}
@@ -75,9 +79,22 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 		{
 			if (ret == TRUE && cbTransferred > 0)
 			{
+				// [수정3] Front를 미는 행위도 링버퍼 조작이므로 반드시 Lock 보호!
+				AcquireSRWLockExclusive(&session->lock);
 				session->sendBuffer.MoveFront(cbTransferred);
+				ReleaseSRWLockExclusive(&session->lock);
 			}
-			InterlockedExchange(&session->sendFlag, 0); 
+
+			// 전송 1회 완료 -> 플래그 해제
+			InterlockedExchange(&session->sendFlag, 0);
+
+			// [수정4] 내가 전송하는 동안 누군가 SendPacket으로 데이터를 또 넣었을 수 있음.
+			// 남은 데이터가 있다면 다시 SendPost를 트리거 해줘야 안 멈춤!
+			if (session->sendBuffer.GetUseSize() > 0)
+			{
+				SendPost(session);
+			}
+
 			ReleaseSession(session);
 		}
 		else
