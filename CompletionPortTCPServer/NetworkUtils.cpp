@@ -97,6 +97,7 @@ void RecvPost(Session* session)
 
 	ZeroMemory(&session->recvOverlapped, sizeof(OVERLAPPED));
 
+	InterlockedIncrement(&session->ioCount);
 	
 	int retval = WSARecv(session->sock, wsaBufs, bufCount, &recvBytes, &flags, &session->recvOverlapped, NULL);
 
@@ -119,13 +120,13 @@ void SendPost(Session* session)
 	}
 
 	// [수정5] 여기서부터 링버퍼를 읽으므로 락을 걸어야 함!
-	AcquireSRWLockExclusive(&session->lock);
+	//AcquireSRWLockExclusive(&session->lock);
 
 	int useSize = session->sendBuffer.GetUseSize();
 	if (useSize == 0)
 	{
 		InterlockedExchange(&session->sendFlag, 0);
-		ReleaseSRWLockExclusive(&session->lock); // 락 해제 잊지말기
+		//ReleaseSRWLockExclusive(&session->lock); // 락 해제 잊지말기
 		return;
 	}
 
@@ -155,7 +156,7 @@ void SendPost(Session* session)
 	int retval = WSASend(session->sock, wsaBufs, bufCount, &sendBytes, 0, &session->sendOverlapped, NULL);
 
 	// [수정6] WSASend 호출 후 셋업이 끝났으니 락 해제
-	ReleaseSRWLockExclusive(&session->lock);
+	//ReleaseSRWLockExclusive(&session->lock);
 
 	if (retval == SOCKET_ERROR)
 	{
@@ -163,7 +164,6 @@ void SendPost(Session* session)
 		if (err != ERROR_IO_PENDING)
 		{
 			printf("[Error] WSASend 실패: %d\n", err);
-			DeleteSession(session);
 			ReleaseSession(session);
 		}
 	}
@@ -173,7 +173,7 @@ void ReleaseSession(Session* session)
 	if (InterlockedDecrement(&session->ioCount) == 0)
 	{
 		SessionManager::GetInstance().RemoveSession(session);
-		if (session->sock != INVALID_SOCKET) closesocket(session->sock);
+		closesocket(session->sock);
 		delete session;
 		printf("소켓 종료\n ");
 	}
