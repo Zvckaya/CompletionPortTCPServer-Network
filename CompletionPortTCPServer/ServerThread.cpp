@@ -43,7 +43,7 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 		if (ret == FALSE || cbTransferred == 0)
 		{
-			ReleaseSession(session);
+			DeleteSession(session);
 			continue;
 		}
 
@@ -51,27 +51,19 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 		{
 
 			session->recvBuffer.MoveRear(cbTransferred);
-
 			int recvLen = session->recvBuffer.GetUseSize();
-
-			// [수정1] +1 제거 (바이너리이므로 불필요한 메모리 낭비)
 			char* tempBuf = new char[recvLen];
-
 			session->recvBuffer.Dequeue(tempBuf, recvLen);
-
-			// [수정2] 직접 Enqueue 대신 SendPacket 호출 (내부에서 Lock 보호 됨)
 			SendPacket(session, tempBuf, recvLen);
-
 			delete[] tempBuf;
-
-			// RecvPost(session); 는 SendPacket 밖에서, 즉 여기서 하는게 맞습니다.
 			RecvPost(session);
 
 		}
 		else if (lpOverlapped == &session->sendOverlapped)
 		{
-
+			AcquireSRWLockExclusive(&session->lock);
 			session->sendBuffer.MoveFront(cbTransferred);
+			ReleaseSRWLockExclusive(&session->lock);
 
 			InterlockedExchange(&session->sendFlag, 0);
 
@@ -85,7 +77,6 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 		else
 		{
 
-			//예외처리 
 		}
 	}
 
@@ -126,8 +117,7 @@ DWORD WINAPI AcceptThread(LPVOID arg)
 		int zero = 0;
 		setsockopt(client_sock, SOL_SOCKET, SO_SNDBUF, (char*)&zero, sizeof(zero));
 
-		//	printf("클라이언트 접속 IP: %s PORT: %d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-
+	
 		Session* session = new Session;
 		session->sock = client_sock;
 

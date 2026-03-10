@@ -11,4 +11,4 @@
 #include <unordered_map>
 
 #define SERVERPORT 6000
-#define BUFSIZE 1500
+#define BUFSIZE 16384
