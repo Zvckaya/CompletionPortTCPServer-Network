@@ -7,7 +7,7 @@ bool InitWSAandIOCP(HANDLE& outHcp)
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
-		printf("[Error] WSAStartup 실패\n");
+		printf("[Error] WSAStartup err\n");
 		return false;
 	}
 
@@ -15,13 +15,13 @@ bool InitWSAandIOCP(HANDLE& outHcp)
 
 	if (outHcp == NULL)
 	{
-		printf("[Error] IOCP 핸들 생성 실패. Error: %d\n", WSAGetLastError());
+		printf("[Error] IOCP create error. Error: %d\n", WSAGetLastError());
 
 		WSACleanup();
 		return false;
 	}
 
-	printf("[System] IOCP 생성 완료.\n");
+	printf("[System] IOCP Init complete.\n");
 	return true;
 
 }
@@ -32,7 +32,7 @@ SOCKET BindAndListen(int port)
 	SOCKET listenSock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenSock == INVALID_SOCKET)
 	{
-		printf("[Error] 리슨 소켓 생성 실패: %d\n", WSAGetLastError());
+		printf("[Error] listen socket start err: %d\n", WSAGetLastError());
 		return INVALID_SOCKET;
 	}
 
@@ -45,7 +45,7 @@ SOCKET BindAndListen(int port)
 	int retval = bind(listenSock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR)
 	{
-		printf("[Error] 바인드 실패: %d\n", WSAGetLastError());
+		printf("[Error] binding err: %d\n", WSAGetLastError());
 		closesocket(listenSock);
 		return INVALID_SOCKET;
 	}
@@ -53,17 +53,15 @@ SOCKET BindAndListen(int port)
 	retval = listen(listenSock, SOMAXCONN);
 	if (retval == SOCKET_ERROR)
 	{
-		printf("[Error] 리스닝 실패: %d\n", WSAGetLastError());
+		printf("[Error] listening err: %d\n", WSAGetLastError());
 		closesocket(listenSock);
 		return INVALID_SOCKET;
 	}
 
-	printf("[System] 서버 시작.....PORT: %d...\n", port);
+	printf("[System] listening.....PORT: %d...\n", port);
 	return listenSock;
 }
 
-volatile int flaga = 0;
-volatile int flagb = 0;
 void RecvPost(Session* session)
 {
 	CRingBuffer* pRb = &session->recvBuffer;
@@ -97,10 +95,11 @@ void RecvPost(Session* session)
 
 	ZeroMemory(&session->recvOverlapped, sizeof(OVERLAPPED));
 
-	
+	InterlockedIncrement(&session->ioCount);
+
 	int retval = WSARecv(session->sock, wsaBufs, bufCount, &recvBytes, &flags, &session->recvOverlapped, NULL);
 
-	if (retval == SOCKET_ERROR&& WSAGetLastError()!= ERROR_IO_PENDING)
+	if (retval == SOCKET_ERROR && WSAGetLastError() != ERROR_IO_PENDING)
 	{
 		DeleteSession(session);
 	}
@@ -114,13 +113,11 @@ void SendPost(Session* session)
 		return;
 	}
 
-	//AcquireSRWLockExclusive(&session->lock);
-
 	int useSize = session->sendBuffer.GetUseSize();
 	if (useSize == 0)
 	{
 		InterlockedExchange(&session->sendFlag, 0);
-		//ReleaseSRWLockExclusive(&session->lock); // 락 해제 잊지말기
+
 		return;
 	}
 
@@ -156,12 +153,14 @@ void SendPost(Session* session)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			//printf("[Error] WSASend 실패: %d\n", err);
-			//ReleaseSession(session);
+		
 			DeleteSession(session);
 		}
 	}
 }
+
+
+
 void ReleaseSession(Session* session)
 {
 	if (InterlockedDecrement(&session->ioCount) == 0)
@@ -169,16 +168,24 @@ void ReleaseSession(Session* session)
 		SessionManager::GetInstance().RemoveSession(session);
 		closesocket(session->sock);
 		delete session;
-		//printf("소켓 종료\n ");
+		
 	}
 
 }
 void DeleteSession(Session* session)
 {
-	if (session->sock == INVALID_SOCKET) return;
-
-	closesocket(session->sock);
+	AcquireSRWLockExclusive(&session->lock);
+	SOCKET sock = session->sock;
 	session->sock = INVALID_SOCKET;
+	ReleaseSRWLockExclusive(&session->lock);
+
+	if (sock == INVALID_SOCKET)
+	{
+		ReleaseSession(session);
+		return;
+	}
+
+	closesocket(sock);
 	ReleaseSession(session);
 }
 

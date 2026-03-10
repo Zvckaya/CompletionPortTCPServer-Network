@@ -20,7 +20,7 @@ void CreateWorkerThreads(HANDLE hIocp, int threadCount)
 		}
 	}
 
-	printf("[System] %d °³ ¿öÄ¿ ½º·¹µå »ý¼º .\n", threadCount);
+	printf("[System] %d worker thread start...\n", threadCount);
 }
 
 
@@ -38,7 +38,7 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 		session = reinterpret_cast<Session*>(session);
 
-		if (session == nullptr && lpOverlapped == nullptr)//0,0,nullptr ³Ö¾î¼­ post ÇßÀ»¶§¸¸  ÀÌ·¸°Ô 
+		if (session == nullptr && lpOverlapped == nullptr)//0,0,nullptr ï¿½Ö¾î¼­ post ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  ï¿½Ì·ï¿½ï¿½ï¿½ 
 			break;
 
 		if (ret == FALSE || cbTransferred == 0)
@@ -49,7 +49,6 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
 		if (lpOverlapped == &session->recvOverlapped)
 		{
-
 			session->recvBuffer.MoveRear(cbTransferred);
 			int recvLen = session->recvBuffer.GetUseSize();
 			char* tempBuf = new char[recvLen];
@@ -57,7 +56,7 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 			SendPacket(session, tempBuf, recvLen);
 			delete[] tempBuf;
 			RecvPost(session);
-
+			ReleaseSession(session);
 		}
 		else if (lpOverlapped == &session->sendOverlapped)
 		{
@@ -97,7 +96,7 @@ DWORD WINAPI AcceptThread(LPVOID arg)
 	int addrlen;
 
 
-	printf("[System] Accept ½º·¹µå ½ÃÀÛ .\n");
+	printf("[System] Accept thread staring .\n");
 
 	while (true)
 	{
