@@ -166,9 +166,7 @@ void ReleaseSession(Session* session)
 	if (InterlockedDecrement(&session->ioCount) == 0)
 	{
 		SessionManager::GetInstance().RemoveSession(session);
-		closesocket(session->sock);
 		delete session;
-		
 	}
 
 }
