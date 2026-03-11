@@ -1,60 +1,37 @@
 #include "Types.h"
-#include "Session.h"
-#include "SessionManager.h"
-#include "NetworkUtils.h"
-#include "ServerThread.h"
+#include "IOCPEchoServer.h"
 
 int main()
 {
-    HANDLE hcp;
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	int workerCount = (int)si.dwNumberOfProcessors * 2;
 
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
+	IOCPEchoServer server;
 
-    int threadCount = (int)si.dwNumberOfProcessors * 2;
+	if (!server.Start(L"0.0.0.0", 6000, workerCount, workerCount, false, 1000))
+	{
+		printf("[Error] Server start failed.\n");
+		return 1;
+	}
 
+	printf("[System] Echo server running. Press Enter to shutdown...\n");
 
-    if (InitWSAandIOCP(hcp) == false)
-    {
-        return 1;
-    }
+	// Enter ÏûÖÎ†•ÎßàÎã§ Î™®ÎãàÌÑ∞ÎßÅ Ï∂úÎ†•, 'q' ÏûÖÎ†• Ïãú Ï¢ÖÎ£å
+	while (true)
+	{
+		int ch = getchar();
+		if (ch == 'q' || ch == 'Q')
+			break;
 
-    CreateWorkerThreads(hcp,threadCount);
+		printf("[Monitor] Sessions: %d  AcceptTPS: %d  RecvTPS: %d  SendTPS: %d\n",
+			server.GetSessionCount(),
+			server.GetAcceptTPS(),
+			server.GetRecvMessageTPS(),
+			server.GetSendMessageTPS());
+	}
 
-    SOCKET listen_sock = BindAndListen(SERVERPORT);
-    if (listen_sock == INVALID_SOCKET)
-    {
-        WSACleanup();
-        return 1;
-    }
-
-    AcceptThreadArgs args;
-    args.socket = listen_sock;
-    args.hIocp = hcp;
-
-    HANDLE hAcceptThread = CreateThread(NULL, 0, AcceptThread, &args, 0, NULL);
-    if (hAcceptThread == NULL)
-    {
-        return 1;
-    }
-
-    printf("Press Any Key to Shutdown...\n");
-    getchar();
-
-    closesocket(listen_sock);
-    
-    for (int i = 0; i < threadCount; ++i)
-    {
-        PostQueuedCompletionStatus(hcp, 0, 0, nullptr);
-    }
-
-
-    WaitForSingleObject(hAcceptThread, INFINITE);
-    CloseHandle(hAcceptThread);
-
-    CloseHandle(hcp);
-    WSACleanup();
-
-    printf("∏µÁ ∏Æº“Ω∫ ¡§∏Æ øœ∑·... ¡æ∑·\n");
-    return 0;
+	server.Stop();
+	printf("[System] Server stopped.\n");
+	return 0;
 }

@@ -123,16 +123,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
+    <ClCompile Include="IOCPEchoServer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetworkUtils.cpp" />
-    <ClCompile Include="ServerThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CPacket.h" />
     <ClInclude Include="CRingBuffer.h" />
+    <ClInclude Include="IOCPEchoServer.h" />
     <ClInclude Include="NetworkUtils.h" />
-    <ClInclude Include="ServerThread.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="SessionManager.h" />
     <ClInclude Include="Types.h" />
