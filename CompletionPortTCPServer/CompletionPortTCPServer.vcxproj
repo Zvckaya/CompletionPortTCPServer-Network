@@ -129,6 +129,7 @@
     <ClCompile Include="ServerThread.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="NetworkUtils.h" />
     <ClInclude Include="ServerThread.h" />
