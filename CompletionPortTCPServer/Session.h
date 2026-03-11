@@ -18,7 +18,7 @@ struct Session
 	long ioCount;
 	long sendFlag;
 
-	SRWLOCK lock;
+	CRITICAL_SECTION lock;
 
 	Session()
 	{
@@ -29,11 +29,12 @@ struct Session
 
 		ZeroMemory(&recvOverlapped, sizeof(recvOverlapped));
 		ZeroMemory(&sendOverlapped, sizeof(sendOverlapped));
-		InitializeSRWLock(&lock);
+		InitializeCriticalSection(&lock);
 	}
 
 	~Session()
 	{
 		if (sock != INVALID_SOCKET) closesocket(sock);
+		DeleteCriticalSection(&lock);
 	}
 };

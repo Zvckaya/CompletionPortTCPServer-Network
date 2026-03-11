@@ -172,10 +172,10 @@ void ReleaseSession(Session* session)
 }
 void DeleteSession(Session* session)
 {
-	AcquireSRWLockExclusive(&session->lock);
+	EnterCriticalSection(&session->lock);
 	SOCKET sock = session->sock;
 	session->sock = INVALID_SOCKET;
-	ReleaseSRWLockExclusive(&session->lock);
+	LeaveCriticalSection(&session->lock);
 
 	if (sock == INVALID_SOCKET)
 	{
@@ -191,9 +191,9 @@ void DeleteSession(Session* session)
 
 void SendPacket(Session* session, const char* data, int size)
 {
-	AcquireSRWLockExclusive(&session->lock);
+	EnterCriticalSection(&session->lock);
 	session->sendBuffer.Enqueue(data, size);
-	ReleaseSRWLockExclusive(&session->lock);
+	LeaveCriticalSection(&session->lock);
 
 	SendPost(session);
 }

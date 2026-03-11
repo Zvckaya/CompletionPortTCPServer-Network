@@ -173,9 +173,9 @@ bool CLanServer::SendPacket(SessionID sessionId, CPacket* packet)
 	if (s == nullptr)
 		return false;
 
-	AcquireSRWLockExclusive(&s->lock);
+	EnterCriticalSection(&s->lock);
 	s->sendBuffer.Enqueue(packet->GetBufferPtr(), packet->GetDataSize());
-	ReleaseSRWLockExclusive(&s->lock);
+	LeaveCriticalSection(&s->lock);
 
 	SendPost(s);
 
@@ -265,9 +265,9 @@ void CLanServer::WorkerThreadProc()
 		}
 		else if (lpOverlapped == &session->sendOverlapped)
 		{
-			AcquireSRWLockExclusive(&session->lock);
+			EnterCriticalSection(&session->lock);
 			session->sendBuffer.MoveFront(cbTransferred);
-			ReleaseSRWLockExclusive(&session->lock);
+			LeaveCriticalSection(&session->lock);
 
 			InterlockedExchange(&session->sendFlag, 0);
 
@@ -438,10 +438,10 @@ void CLanServer::SendPost(Session* session)
 
 void CLanServer::DeleteSession(Session* session)
 {
-	AcquireSRWLockExclusive(&session->lock);
+	EnterCriticalSection(&session->lock);
 	SOCKET sock      = session->sock;
 	session->sock    = INVALID_SOCKET;
-	ReleaseSRWLockExclusive(&session->lock);
+	LeaveCriticalSection(&session->lock);
 
 	if (sock == INVALID_SOCKET)
 	{
