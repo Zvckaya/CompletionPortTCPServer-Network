@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="소스 파일">
@@ -13,25 +13,34 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="라이브러리">
+      <UniqueIdentifier>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="라이브러리\소스 파일">
+      <UniqueIdentifier>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="라이브러리\헤더 파일">
+      <UniqueIdentifier>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="CRingBuffer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="NetworkUtils.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="ServerThread.cpp">
+    <ClCompile Include="CLanServer.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCPEchoServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\CRingBuffer.cpp">
+      <Filter>라이브러리\소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CRingBuffer.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Session.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -41,14 +50,23 @@
     <ClInclude Include="NetworkUtils.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="ServerThread.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="SessionManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="CLanServer.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="IOCPEchoServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\CRingBuffer.h">
+      <Filter>라이브러리\헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\CPacket.h">
+      <Filter>라이브러리\헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\CMemoryPool.h">
+      <Filter>라이브러리\헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

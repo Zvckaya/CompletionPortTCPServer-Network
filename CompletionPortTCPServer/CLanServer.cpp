@@ -1,5 +1,5 @@
 #include "CLanServer.h"
-#include "CPacket.h"
+#include "lib/CPacket.h"
 
 // ============================================================
 // 생성 / 소멸

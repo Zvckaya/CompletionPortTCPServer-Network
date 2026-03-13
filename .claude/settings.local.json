@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(MSBuild CompletionPortTCPServer.sln /p:Configuration=Debug /p:Platform=x64 2>&1)",
-      "Bash(powershell.exe -Command \"& 'C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe' 'C:\\\\Users\\\\lzvck\\\\source\\\\repos\\\\CompletionPortTCPServer-Network\\\\CompletionPortTCPServer.sln' /p:Configuration=Debug /p:Platform=x64 2>&1\")"
+      "Bash(powershell.exe -Command \"& 'C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe' 'C:\\\\Users\\\\lzvck\\\\source\\\\repos\\\\CompletionPortTCPServer-Network\\\\CompletionPortTCPServer.sln' /p:Configuration=Debug /p:Platform=x64 2>&1\")",
+      "Bash(cd \"C:/Users/lzvck/source/repos/CompletionPortTCPServer-Network/CompletionPortTCPServer\" && rm CRingBuffer.h CRingBuffer.cpp CPacket.h CMemoryPool.h)"
     ]
   }
 }

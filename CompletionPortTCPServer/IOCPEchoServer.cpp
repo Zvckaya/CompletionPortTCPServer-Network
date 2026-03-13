@@ -1,5 +1,5 @@
 #include "IOCPEchoServer.h"
-#include "CPacket.h"
+#include "lib/CPacket.h"
 
 bool IOCPEchoServer::OnConnectionRequest(const wchar_t* ip, int port)
 {

@@ -39,9 +39,9 @@ public:
 	char* GetBufferPtr(void);
 
 private:
-	char* m_pBuffer;		
-	int		m_iBufferSize;	
-	int		m_iFront;		
-	int		m_iRear;		
+	char* m_pBuffer;
+	int		m_iBufferSize;
+	int		m_iFront;
+	int		m_iRear;
 
 };

@@ -1,6 +1,6 @@
 #pragma once
 #include "Types.h"
-#include "CRingBuffer.h"
+#include "lib/CRingBuffer.h"
 
 using SessionID = unsigned long long;
 
