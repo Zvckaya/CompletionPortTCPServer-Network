@@ -124,20 +124,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CLanServer.cpp" />
+    <ClCompile Include="CSerialBuffer.cpp" />
     <ClCompile Include="IOCPEchoServer.cpp" />
     <ClCompile Include="lib\CRingBuffer.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="NetworkUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CSerialBuffer.h" />
     <ClInclude Include="IOCPEchoServer.h" />
     <ClInclude Include="lib\CMemoryPool.h" />
     <ClInclude Include="lib\CPacket.h" />
     <ClInclude Include="lib\CRingBuffer.h" />
-    <ClInclude Include="NetworkUtils.h" />
     <ClInclude Include="Session.h" />
-    <ClInclude Include="SessionManager.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

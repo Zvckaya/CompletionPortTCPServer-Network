@@ -39,6 +39,9 @@
     <ClCompile Include="lib\CRingBuffer.cpp">
       <Filter>라이브러리\소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="CSerialBuffer.cpp">
+      <Filter>라이브러리\소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Session.h">
@@ -66,6 +69,9 @@
       <Filter>라이브러리\헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="lib\CMemoryPool.h">
+      <Filter>라이브러리\헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CSerialBuffer.h">
       <Filter>라이브러리\헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

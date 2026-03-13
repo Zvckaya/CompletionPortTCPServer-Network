@@ -2,6 +2,27 @@
 #include "lib/CPacket.h"
 
 // ============================================================
+// SessionID 인코딩/디코딩
+// [상위 16bit: index] [하위 48bit: uniqueId]
+// ============================================================
+
+SessionID CLanServer::MakeSessionID(WORD index, unsigned long long uniqueId)
+{
+	return ((SessionID)index << 48) | (uniqueId & 0x0000FFFFFFFFFFFF);
+}
+
+WORD CLanServer::GetIndex(SessionID id)
+{
+	return (WORD)(id >> 48);
+}
+
+unsigned long long CLanServer::GetUniqueID(SessionID id)
+{
+	return id & 0x0000FFFFFFFFFFFF;
+}
+
+
+// ============================================================
 // 생성 / 소멸
 // ============================================================
 
@@ -9,11 +30,14 @@ CLanServer::CLanServer()
 	: _hIocp(NULL), _listenSock(INVALID_SOCKET)
 	, _acceptThread(NULL), _monitorThread(NULL)
 	, _workerRunningCount(0), _maxConnections(0), _running(false)
-	, _sessionIdCounter(0LL)
+	, _uniqueIdCounter(0LL), _sessionCount(0)
 	, _acceptCount(0), _recvCount(0), _sendCount(0)
 	, _acceptTPS(0), _recvTPS(0), _sendTPS(0)
 {
 	InitializeSRWLock(&_sessionLock);
+
+	for (WORD i = 0; i < MAX_SESSION; i++)
+		_freeIndices.push(i);
 }
 
 CLanServer::~CLanServer()
@@ -59,7 +83,7 @@ bool CLanServer::Start(const wchar_t* ip, int port,
 		return false;
 	}
 
-	// 나글 옵션
+	// 나글 옵션 ON/OFF
 	if (!nagle)
 	{
 		int opt = 1;
@@ -150,10 +174,7 @@ void CLanServer::Stop()
 
 int CLanServer::GetSessionCount()
 {
-	AcquireSRWLockShared(&_sessionLock);
-	int cnt = (int)_sessions.size();
-	ReleaseSRWLockShared(&_sessionLock);
-	return cnt;
+	return (int)_sessionCount;
 }
 
 bool CLanServer::Disconnect(SessionID sessionId)
@@ -302,7 +323,7 @@ void CLanServer::AcceptThreadProc()
 		}
 
 		// 최대 접속자 초과
-		if (GetSessionCount() >= _maxConnections)
+		if (_sessionCount >= _maxConnections)
 		{
 			closesocket(clientSock);
 			continue;
@@ -313,35 +334,53 @@ void CLanServer::AcceptThreadProc()
 		InetNtopW(AF_INET, &clientAddr.sin_addr, ipStr, 16);
 		int port = ntohs(clientAddr.sin_port);
 
-		// 서버 측 연결 허용 여부 판단
+		// 서버 측 연결 허용 여부 판단-> ip, port 검사 
 		if (!OnConnectionRequest(ipStr, port))
 		{
 			closesocket(clientSock);
 			continue;
 		}
 
+		// 빈 슬롯 확보
+		AcquireSRWLockExclusive(&_sessionLock);
+		if (_freeIndices.empty())
+		{
+			ReleaseSRWLockExclusive(&_sessionLock);
+			closesocket(clientSock);
+			continue;
+		}
+		WORD idx = _freeIndices.top();
+		_freeIndices.pop();
+
+		// uniqueId 생성 및 슬롯 활성화
+		unsigned long long uid = (unsigned long long)InterlockedIncrement64(&_uniqueIdCounter)
+		                         & 0x0000FFFFFFFFFFFF;
+		SessionID newId        = MakeSessionID(idx, uid);
+
+		Sessions& slot         = _sessions[idx];
+		slot.session.Reset();
+		slot.session.sock      = clientSock;
+		slot.session.sessionId = newId;
+		slot.uniqueId          = uid;
+		ReleaseSRWLockExclusive(&_sessionLock);
+
+		InterlockedIncrement(&_sessionCount);
+
 		// 송신 버퍼 0 설정 (Zero-Copy)
 		int zero = 0;
 		setsockopt(clientSock, SOL_SOCKET, SO_SNDBUF, (char*)&zero, sizeof(zero));
 
-		// 세션 생성
-		Session* session  = new Session;
-		session->sock     = clientSock;
-		session->sessionId = (SessionID)InterlockedIncrement64(&_sessionIdCounter);
-
-		AddSession(session);
-
-		CreateIoCompletionPort((HANDLE)clientSock, _hIocp, (ULONG_PTR)session, 0);
+		CreateIoCompletionPort((HANDLE)clientSock, _hIocp, (ULONG_PTR)&slot.session, 0);
 
 		// 접속 완료 이벤트
 		ClientInfo info;
 		wcscpy_s(info.ip, ipStr);
 		info.port = port;
-		OnClientJoin(info, session->sessionId);
+		OnClientJoin(info, newId);
 
 		InterlockedIncrement(&_acceptCount);
 
-		RecvPost(session);
+		RecvPost(&slot.session);
 	}
 }
 
@@ -457,46 +496,41 @@ void CLanServer::ReleaseSession(Session* session)
 {
 	if (InterlockedDecrement(&session->ioCount) == 0)
 	{
-		SessionID id = session->sessionId;
-		RemoveSession(session);
-		delete session;
+		SessionID id  = session->sessionId;
+		WORD      idx = GetIndex(id);
+
+		AcquireSRWLockExclusive(&_sessionLock);
+		_sessions[idx].uniqueId = 0;
+		_freeIndices.push(idx);
+		ReleaseSRWLockExclusive(&_sessionLock);
+
+		InterlockedDecrement(&_sessionCount);
 		OnClientLeave(id);
 	}
 }
 
 
 // ============================================================
-// 세션 맵 관리
+// 세션 검색
 // ============================================================
 
 Session* CLanServer::FindSession(SessionID sessionId)
 {
+	WORD idx = GetIndex(sessionId);
+	if (idx >= MAX_SESSION)
+		return nullptr;
+
 	AcquireSRWLockShared(&_sessionLock);
 
-	auto it = _sessions.find(sessionId);
-	if (it == _sessions.end())
+	Sessions& slot = _sessions[idx];
+	if (slot.uniqueId != GetUniqueID(sessionId))
 	{
 		ReleaseSRWLockShared(&_sessionLock);
 		return nullptr;
 	}
 
-	Session* s = it->second;
-	InterlockedIncrement(&s->ioCount);   // 삭제 방지
+	InterlockedIncrement(&slot.session.ioCount);
 
 	ReleaseSRWLockShared(&_sessionLock);
-	return s;
-}
-
-void CLanServer::AddSession(Session* session)
-{
-	AcquireSRWLockExclusive(&_sessionLock);
-	_sessions.insert({ session->sessionId, session });
-	ReleaseSRWLockExclusive(&_sessionLock);
-}
-
-void CLanServer::RemoveSession(Session* session)
-{
-	AcquireSRWLockExclusive(&_sessionLock);
-	_sessions.erase(session->sessionId);
-	ReleaseSRWLockExclusive(&_sessionLock);
+	return &slot.session;
 }

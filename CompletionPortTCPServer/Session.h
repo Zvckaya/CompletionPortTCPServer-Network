@@ -37,4 +37,16 @@ struct Session
 		if (sock != INVALID_SOCKET) closesocket(sock);
 		DeleteCriticalSection(&lock);
 	}
+
+	void Reset()
+	{
+		sock      = INVALID_SOCKET;
+		sessionId = 0;
+		ioCount   = 0;
+		sendFlag  = 0;
+		recvBuffer.ClearBuffer();
+		sendBuffer.ClearBuffer();
+		ZeroMemory(&recvOverlapped, sizeof(recvOverlapped));
+		ZeroMemory(&sendOverlapped, sizeof(sendOverlapped));
+	}
 };

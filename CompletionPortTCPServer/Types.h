@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <vector>
 #include <unordered_map>
+#include <stack>
 
-#define SERVERPORT 6000
-#define BUFSIZE 16384
+#define SERVERPORT   6000
+#define BUFSIZE      16384
+#define MAX_SESSION  1000

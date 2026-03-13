@@ -50,26 +50,42 @@ protected:
 
 
 private:
+	// -------------------------------------------------------
+	// 세션 슬롯
+	// -------------------------------------------------------
+	struct Sessions
+	{
+		Session            session;
+		unsigned long long uniqueId = 0;   // 0 = 비활성
+	};
+
+	// SessionID 인코딩/디코딩
+	// [상위 16bit: 배열 index] [하위 48bit: uniqueId]
+	static SessionID          MakeSessionID(WORD index, unsigned long long uniqueId);
+	static WORD               GetIndex     (SessionID id);
+	static unsigned long long GetUniqueID  (SessionID id);
+
+	// -------------------------------------------------------
 	// 스레드 진입점 (static → 인스턴스 메서드로 위임)
-	static DWORD WINAPI WorkerThread(LPVOID arg);
-	static DWORD WINAPI AcceptThread(LPVOID arg);
+	// -------------------------------------------------------
+	static DWORD WINAPI WorkerThread (LPVOID arg);
+	static DWORD WINAPI AcceptThread (LPVOID arg);
 	static DWORD WINAPI MonitorThread(LPVOID arg);
 
 	void WorkerThreadProc();
 	void AcceptThreadProc();
 	void MonitorThreadProc();
 
+	// -------------------------------------------------------
 	// 내부 I/O 헬퍼
-	void RecvPost(Session* session);
-	void SendPost(Session* session);
+	// -------------------------------------------------------
+	void RecvPost     (Session* session);
+	void SendPost     (Session* session);
 	void DeleteSession(Session* session);
 	void ReleaseSession(Session* session);
 
-	// 세션 맵 관리
-	// FindSession은 ioCount를 증가시켜 반환 — 사용 후 반드시 ReleaseSession 호출
+	// 세션 검색 — ioCount 증가시켜 반환, 사용 후 반드시 ReleaseSession 호출
 	Session* FindSession(SessionID sessionId);
-	void     AddSession(Session* session);
-	void     RemoveSession(Session* session);
 
 	// -------------------------------------------------------
 	// IOCP / 소켓
@@ -89,11 +105,13 @@ private:
 	bool _running;
 
 	// -------------------------------------------------------
-	// 세션 관리
+	// 세션 관리 (고정 배열 + free-list)
 	// -------------------------------------------------------
-	SRWLOCK                              _sessionLock;
-	std::unordered_map<SessionID, Session*> _sessions;
-	volatile LONGLONG                    _sessionIdCounter;
+	SRWLOCK          _sessionLock;
+	Sessions         _sessions[MAX_SESSION];
+	std::stack<WORD> _freeIndices;
+	volatile LONGLONG _uniqueIdCounter;
+	volatile long     _sessionCount;
 
 	// -------------------------------------------------------
 	// TPS 카운터
