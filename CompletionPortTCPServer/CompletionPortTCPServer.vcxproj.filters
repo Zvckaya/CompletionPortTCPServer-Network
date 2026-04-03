@@ -71,5 +71,8 @@
     <ClInclude Include="CDebugLog.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="CLFMemoryPool.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

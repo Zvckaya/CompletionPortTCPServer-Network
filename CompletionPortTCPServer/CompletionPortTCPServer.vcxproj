@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="CDebugLog.h" />
     <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CLFMemoryPool.h" />
     <ClInclude Include="CLFStack.h" />
     <ClInclude Include="CSerialBuffer.h" />
     <ClInclude Include="IOCPEchoServer.h" />
