@@ -34,8 +34,8 @@ enum class eLogEvent : BYTE
 
 struct DebugLogEntry
 {
-    UINT64    tsc;       // CPU timestamp at the moment this entry was recorded (rdtsc)
-    LONGLONG  seq;       // global sequence number (monotonic, survives ring wrap)
+    UINT64    tsc;       
+    LONGLONG  seq;       
     DWORD     threadId;
     eLogEvent event;
     void* ptr1;
@@ -49,7 +49,7 @@ inline volatile LONGLONG  g_LogIndex = 0;
 
 inline void Log_Record(eLogEvent event, void* ptr1, void* ptr2 = nullptr)
 {
-    UINT64    tsc = __rdtsc();  // read tsc before seq to minimize timestamp inversion
+    UINT64    tsc = __rdtsc();  
     long long seq = InterlockedIncrement64(&g_LogIndex) - 1;
     long      idx = static_cast<long>(seq % LOG_SIZE);
 

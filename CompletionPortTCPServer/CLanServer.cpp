@@ -34,19 +34,18 @@ CLanServer::CLanServer()
 	, _acceptCount(0), _recvCount(0), _sendCount(0)
 	, _acceptTPS(0), _recvTPS(0), _sendTPS(0)
 	, _contentEvent(NULL)
+	, _freeIndices(MAX_SESSION)
 {
-	InitializeCriticalSection(&_freeIndexLock);
 	InitializeCriticalSection(&_contentQueueLock);
 	_contentEvent = CreateEvent(NULL, FALSE, FALSE, NULL);  // auto-reset
 
 	for (WORD i = 0; i < MAX_SESSION; i++)
-		_freeIndices.push(i);
+		_freeIndices.Push(i);
 }
 
 CLanServer::~CLanServer()
 {
 	Stop();
-	DeleteCriticalSection(&_freeIndexLock);
 	DeleteCriticalSection(&_contentQueueLock);
 	if (_contentEvent != NULL)
 	{
@@ -433,17 +432,13 @@ void CLanServer::AcceptThreadProc()
 			continue;
 		}
 
-		// 빈 슬롯 확보 (free-list lock)
-		EnterCriticalSection(&_freeIndexLock);
-		if (_freeIndices.empty())
+		// 빈 슬롯 확보 (lock-free pop)
+		WORD idx;
+		if (!_freeIndices.Pop(idx))
 		{
-			LeaveCriticalSection(&_freeIndexLock);
 			closesocket(clientSock);
 			continue;
 		}
-		WORD idx = _freeIndices.top();
-		_freeIndices.pop();
-		LeaveCriticalSection(&_freeIndexLock);
 
 		// uniqueId 생성 및 슬롯 활성화
 		unsigned long long uid = (unsigned long long)InterlockedIncrement64(&_uniqueIdCounter)
@@ -594,9 +589,7 @@ void CLanServer::ReleaseSession(Session* session)
 
 		session->Reset();
 
-		EnterCriticalSection(&_freeIndexLock);
-		_freeIndices.push(idx);
-		LeaveCriticalSection(&_freeIndexLock);
+		_freeIndices.Push(idx);
 
 		InterlockedDecrement(&_sessionCount);
 		OnClientLeave(id);

@@ -94,7 +94,7 @@ void CLFStack<T>::Push(const T& data)
 		__debugbreak();
 
 	node->data = data;
-	Log_Record(eLogEvent::PUSH_NEW, node);
+	//Log_Record(eLogEvent::PUSH_NEW, node);
 
 	LONGLONG oldPacked;
 	LONGLONG newPacked;
@@ -104,7 +104,7 @@ void CLFStack<T>::Push(const T& data)
 		UINT64 stamp  = UnpackStamp((UINT64)oldPacked);
 		node->next    = oldTop;
 		newPacked     = Pack(node, stamp + 1);
-		Log_Record(eLogEvent::PUSH_CAS_BEFORE, oldTop, node);
+		//Log_Record(eLogEvent::PUSH_CAS_BEFORE, oldTop, node);
 	} while (InterlockedCompareExchange64(&_top, newPacked, oldPacked) != oldPacked);
 
 	Log_Record(eLogEvent::PUSH_CAS_OK, node, node->next);
@@ -125,8 +125,6 @@ bool CLFStack<T>::Pop(T& data)
 		if (oldTop == nullptr)
 			return false;
 
-		// CAS 전 검증: CODE_FREE면 이미 풀에 반납된 노드에 접근 중
-		// → 스탬프 wrap-around로 ABA가 슬립스루한 케이스를 2차 방어선으로 감지
 		if (GetBlockNode(oldTop)->checkCode != CODE_ALLOC)
 			__debugbreak();
 
@@ -136,12 +134,12 @@ bool CLFStack<T>::Pop(T& data)
 		Log_Record(eLogEvent::POP_CAS_BEFORE, oldTop, newTop);
 	} while (InterlockedCompareExchange64(&_top, newPacked, oldPacked) != oldPacked);
 
-	Log_Record(eLogEvent::POP_CAS_OK, newTop, oldTop);
+	//Log_Record(eLogEvent::POP_CAS_OK, newTop, oldTop);
 
 	data = oldTop->data;
 
-	Log_Record(eLogEvent::POP_DELETE, oldTop);
-	_nodePool.Free(oldTop);   // → checkCode = CODE_FREE, 풀 free-list로 반환
+	//Log_Record(eLogEvent::POP_DELETE, oldTop);
+	_nodePool.Free(oldTop);   
 
 	InterlockedDecrement((volatile LONG*)&_length);
 	return true;

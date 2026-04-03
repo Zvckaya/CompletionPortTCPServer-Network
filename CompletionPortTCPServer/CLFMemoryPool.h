@@ -28,7 +28,6 @@ public:
 		, m_bPlacementNew(bPlacementNew)
 		, _pFreeNode(0)
 	{
-		// 생성자는 단일 스레드 → CAS 없이 직접 구성
 		st_BLOCK_NODE* pHead = nullptr;
 		for (int i = 0; i < iBlockNum; ++i)
 		{
@@ -66,16 +65,14 @@ public:
 	{
 		st_BLOCK_NODE* pNode = nullptr;
 
-		// free-list에서 CAS로 pop
 		LONGLONG oldPacked;
 		LONGLONG newPacked;
 		do {
 			oldPacked = _pFreeNode;
 			pNode     = UnpackPtr((UINT64)oldPacked);
 
-			if (pNode == nullptr)
+			if (pNode == nullptr) //풀 소진시 
 			{
-				// 풀 소진 → resize (new는 여기서만 발생)
 				pNode                = new st_BLOCK_NODE;
 				pNode->pOwner        = this;
 				pNode->checkCode     = CODE_FREE;
@@ -155,7 +152,7 @@ public:
 	int GetUseCount()      const { return m_iUseCount; }
 
 private:
-	// x64 유저 공간 상위 17비트를 스탬프로 사용 — ABA 감지
+	//17비트 스탬프로 사용
 	static constexpr UINT64 ADDR_MASK   = 0x00007FFFFFFFFFFF;
 	static constexpr int    STAMP_SHIFT = 47;
 	static constexpr UINT64 STAMP_MASK  = 0x1FFFF;
@@ -182,5 +179,5 @@ private:
 	volatile long    m_iUseCount;
 	bool             m_bPlacementNew;
 
-	__declspec(align(8)) volatile LONGLONG _pFreeNode;   // packed: [17-bit stamp | 47-bit ptr]
+	__declspec(align(8)) volatile LONGLONG _pFreeNode;   // [17-bit stamp | 47-bit ptr]
 };

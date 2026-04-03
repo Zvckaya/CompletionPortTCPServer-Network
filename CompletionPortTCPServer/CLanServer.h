@@ -1,6 +1,7 @@
 #pragma once
 #include "Types.h"
 #include "Session.h"
+#include "CLFStack.h"
 #include <queue>
 
 class CPacket;
@@ -120,13 +121,11 @@ private:
 	bool _running;
 
 	// -------------------------------------------------------
-	// 세션 관리 (고정 배열 + free-list)
-	// free-list stack 보호에만 lock 사용
+	// 세션 관리 (고정 배열 + lock-free free-list)
 	// -------------------------------------------------------
-	CRITICAL_SECTION _freeIndexLock;
 	Sessions         _sessions[MAX_SESSION];
 
-	std::stack<WORD> _freeIndices;
+	CLFStack<WORD>   _freeIndices;
 	volatile LONGLONG _uniqueIdCounter;
 	volatile long     _sessionCount;
 
