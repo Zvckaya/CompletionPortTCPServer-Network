@@ -130,7 +130,9 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CDebugLog.h" />
     <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CLFStack.h" />
     <ClInclude Include="CSerialBuffer.h" />
     <ClInclude Include="IOCPEchoServer.h" />
     <ClInclude Include="lib\CMemoryPool.h" />

@@ -27,9 +27,6 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkUtils.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="CLanServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -50,12 +47,6 @@
     <ClInclude Include="Types.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkUtils.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="SessionManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="CLanServer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -73,6 +64,12 @@
     </ClInclude>
     <ClInclude Include="CSerialBuffer.h">
       <Filter>라이브러리\헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CLFStack.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CDebugLog.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

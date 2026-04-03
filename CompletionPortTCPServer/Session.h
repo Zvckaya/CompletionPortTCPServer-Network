@@ -18,8 +18,6 @@ struct Session
 	long ioCount;
 	long sendFlag;
 
-	CRITICAL_SECTION lock;
-
 	Session()
 	{
 		sock      = INVALID_SOCKET;
@@ -29,13 +27,11 @@ struct Session
 
 		ZeroMemory(&recvOverlapped, sizeof(recvOverlapped));
 		ZeroMemory(&sendOverlapped, sizeof(sendOverlapped));
-		InitializeCriticalSection(&lock);
 	}
 
 	~Session()
 	{
 		if (sock != INVALID_SOCKET) closesocket(sock);
-		DeleteCriticalSection(&lock);
 	}
 
 	void Reset()

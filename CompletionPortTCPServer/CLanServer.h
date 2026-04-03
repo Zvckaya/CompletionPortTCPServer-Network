@@ -1,6 +1,7 @@
 #pragma once
 #include "Types.h"
 #include "Session.h"
+#include <queue>
 
 class CPacket;
 
@@ -25,7 +26,6 @@ public:
 	int  GetSessionCount();
 
 	bool Disconnect(SessionID sessionId);
-	bool SendPacket(SessionID sessionId, CPacket* packet);
 
 	int GetAcceptTPS();
 	int GetRecvMessageTPS();
@@ -33,6 +33,11 @@ public:
 
 
 protected:
+	// 콘텐츠 레이어 → 네트워크 송신 진입점
+	// SessionID로 인덱스 추출 → uniqueId 검증 → sendBuffer 적재 → I/O 요청
+	bool SendPost(SessionID sessionId, CPacket* packet);
+
+
 	// Accept 직후 — false 반환 시 연결 거부
 	virtual bool OnConnectionRequest(const wchar_t* ip, int port) = 0;
 
@@ -51,12 +56,22 @@ protected:
 
 private:
 	// -------------------------------------------------------
+	// 콘텐츠 큐 아이템
+	// -------------------------------------------------------
+	struct ContentJob
+	{
+		SessionID sessionId;
+		Session*  session;
+		CPacket*  packet;
+	};
+
+	// -------------------------------------------------------
 	// 세션 슬롯
 	// -------------------------------------------------------
 	struct Sessions
 	{
 		Session            session;
-		unsigned long long uniqueId = 0;   // 0 = 비활성
+		volatile unsigned long long uniqueId = 0;   // 0 = 비활성
 	};
 
 	// SessionID 인코딩/디코딩
@@ -71,21 +86,20 @@ private:
 	static DWORD WINAPI WorkerThread (LPVOID arg);
 	static DWORD WINAPI AcceptThread (LPVOID arg);
 	static DWORD WINAPI MonitorThread(LPVOID arg);
+	static DWORD WINAPI ContentThread(LPVOID arg);
 
 	void WorkerThreadProc();
 	void AcceptThreadProc();
 	void MonitorThreadProc();
+	void ContentThreadProc();
 
 	// -------------------------------------------------------
 	// 내부 I/O 헬퍼
 	// -------------------------------------------------------
-	void RecvPost     (Session* session);
-	void SendPost     (Session* session);
+	void RecvPost  (Session* session);
+	void SendPost  (Session* session);   // 내부용: send 완료 후 재스케줄
 	void DeleteSession(Session* session);
 	void ReleaseSession(Session* session);
-
-	// 세션 검색 — ioCount 증가시켜 반환, 사용 후 반드시 ReleaseSession 호출
-	Session* FindSession(SessionID sessionId);
 
 	// -------------------------------------------------------
 	// IOCP / 소켓
@@ -99,6 +113,7 @@ private:
 	std::vector<HANDLE> _workerThreads;
 	HANDLE              _acceptThread;
 	HANDLE              _monitorThread;
+	HANDLE              _contentThread;
 
 	int  _workerRunningCount;
 	int  _maxConnections;
@@ -106,12 +121,21 @@ private:
 
 	// -------------------------------------------------------
 	// 세션 관리 (고정 배열 + free-list)
+	// free-list stack 보호에만 lock 사용
 	// -------------------------------------------------------
-	SRWLOCK          _sessionLock;
+	CRITICAL_SECTION _freeIndexLock;
 	Sessions         _sessions[MAX_SESSION];
+
 	std::stack<WORD> _freeIndices;
 	volatile LONGLONG _uniqueIdCounter;
 	volatile long     _sessionCount;
+
+	// -------------------------------------------------------
+	// 콘텐츠 스레드 큐
+	// -------------------------------------------------------
+	CRITICAL_SECTION       _contentQueueLock;
+	std::queue<ContentJob> _contentQueue;
+	HANDLE                 _contentEvent;   // auto-reset event
 
 	// -------------------------------------------------------
 	// TPS 카운터
